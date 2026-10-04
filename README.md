@@ -39,7 +39,7 @@ Your `/effort` is the baseline the mod moves from: neither a floor nor a ceiling
 ## Reading the output
 
 - **Transcript:** one line per turn, e.g. `[jev-effort] shadow · jev 0.42 → low (conf 0.71, 212ms) · high → low`.
-- **Status line:** `jev·s ● ▁▃█▂▁ medium → low 0.71 · 340ms`. `jev·s` means shadow mode, `jev` means routing. The glyph is the request state: `◌` asking, `●` answered, `✕` failed (timeout or HTTP error), `–` nothing sent (skipped). The bars are the last 8 Jev scores, low to high; if every bar is the same height, Jev isn't telling your prompts apart.
+- **Status line:** `jev-effort: ● ▁▃█▂▁ medium → low 0.71 · 340ms`. In shadow mode it starts with `shadow`. The glyph is the request state: `◌` asking, `●` answered, `✕` failed (timeout or HTTP error), `–` nothing sent (skipped). The bars are the last 8 Jev scores, low to high; if every bar is the same height, Jev isn't telling your prompts apart.
 
 In shadow mode, compare those lines with your own sense of each task. Once Jev's calls look right, set `shadow: false`. If its confident downgrades are often wrong, raise `minDowngradeConfidence`. Running a while with `sendContext: false` shows what the context adds.
 

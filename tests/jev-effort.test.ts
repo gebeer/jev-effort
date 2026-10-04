@@ -152,15 +152,15 @@ describe('formatting', () => {
     const changed = { shadow: false, session: 'high' as const, answer, note: null, jevMs: 212, decision: decide(answer, 'high', bars) }
     expect(logLine(changed)).toBe('[jev-effort] jev 0.42 → low (conf 0.71, 212ms) · high → low')
     expect(logLine({ ...changed, shadow: true })).toBe('[jev-effort] shadow · jev 0.42 → low (conf 0.71, 212ms) · high → low')
-    expect(statusLine(changed, '▁█')).toBe('jev ● ▁█ high → low 0.71 · 212ms')
+    expect(statusLine(changed, '▁█')).toBe('● ▁█ high → low 0.71 · 212ms')
     const kept = { ...changed, answer: { score: 0.42, confidence: 0.41 }, jevMs: 198, decision: decide({ score: 0.42, confidence: 0.41 }, 'high', bars) }
     expect(logLine(kept)).toBe('[jev-effort] jev 0.42 → low (conf 0.41, 198ms) · high kept: conf 0.41 < 0.60')
-    expect(statusLine({ ...kept, shadow: true }, '')).toBe('jev·s ● high kept (wanted low, 0.41 < 0.60) · 198ms')
+    expect(statusLine({ ...kept, shadow: true }, '')).toBe('shadow ● high kept (wanted low, 0.41 < 0.60) · 198ms')
     const none = { shadow: false, session: 'high' as const, answer: null, note: 'timeout 800ms', decision: { wanted: null, target: null, reason: 'timeout 800ms' } }
     expect(logLine(none)).toBe('[jev-effort] timeout 800ms · high kept')
-    expect(statusLine({ ...none, note: 'skipped: bare command' }, '▃')).toBe('jev – ▃ skipped: bare command · high kept')
-    expect(statusLine(none, '▃')).toBe('jev ✕ ▃ timeout 800ms · high kept')
-    expect(askingLine(true, '▃')).toBe('jev·s ◌ ▃ asking…')
+    expect(statusLine({ ...none, note: 'skipped: bare command' }, '▃')).toBe('– ▃ skipped: bare command · high kept')
+    expect(statusLine(none, '▃')).toBe('✕ ▃ timeout 800ms · high kept')
+    expect(askingLine(true, '▃')).toBe('shadow ◌ ▃ asking…')
     expect(logLine({ ...none, stuck: 'low' })).toBe('[jev-effort] timeout 800ms · high → low (sticky)')
   })
   test('sparkline maps 0..3 onto eight bars, clamped', () => {

@@ -240,7 +240,7 @@ export const sparkline = (scores: readonly number[]) =>
   scores.map((s) => BARS[Math.round((Math.min(3, Math.max(0, s)) / 3) * (BARS.length - 1))]).join('')
 
 const statusHead = (shadow: boolean, glyph: string, spark: string) =>
-  `${shadow ? 'jev·s' : 'jev'} ${glyph}${spark ? ` ${spark}` : ''}`
+  `${shadow ? 'shadow ' : ''}${glyph}${spark ? ` ${spark}` : ''}`
 
 /** While Jev is being asked. */
 export const askingLine = (shadow: boolean, spark: string) => `${statusHead(shadow, '◌', spark)} asking…`
