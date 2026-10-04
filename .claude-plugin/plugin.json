@@ -1,0 +1,72 @@
+{
+  "name": "jev-effort",
+  "version": "0.1.0",
+  "description": "Sets the main conversation's reasoning effort per prompt with TypeSafe's Jev (via OpenRouter), reading recent conversation context. Shadow mode by default: logs what it would do without changing anything.",
+  "author": {
+    "name": "gebeer"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "function-hooks",
+    "effort",
+    "jev"
+  ],
+  "userConfig": {
+    "apiKey": {
+      "type": "string",
+      "title": "Jev API key",
+      "description": "Bearer key for the endpoint (an OpenRouter key by default). Empty: the mod does nothing.",
+      "default": "",
+      "sensitive": true
+    },
+    "shadow": {
+      "type": "boolean",
+      "title": "Shadow mode",
+      "description": "Classify and log what effort it would set, but never change a request",
+      "default": true
+    },
+    "sendContext": {
+      "type": "boolean",
+      "title": "Send conversation context",
+      "description": "Send Claude's last reply, earlier prompts and last turn's tool names along with the prompt. Off: the prompt alone.",
+      "default": true
+    },
+    "minUpgradeConfidence": {
+      "type": "number",
+      "title": "Confidence to raise effort",
+      "description": "How sure Jev must be to raise effort above the session's",
+      "default": 0.3
+    },
+    "minDowngradeConfidence": {
+      "type": "number",
+      "title": "Confidence to lower effort",
+      "description": "How sure Jev must be to lower effort below the session's",
+      "default": 0.6
+    },
+    "timeoutMs": {
+      "type": "number",
+      "title": "Latency budget (ms)",
+      "description": "How long each prompt waits for Jev before going ahead unchanged (100-5000)",
+      "default": 800
+    },
+    "logDecisions": {
+      "type": "boolean",
+      "title": "Log decisions",
+      "description": "A transcript line per turn and a setup line per session; the status line and debug record are always written",
+      "default": true
+    },
+    "model": {
+      "type": "string",
+      "title": "Jev model",
+      "description": "Model id; pin one (e.g. typesafe/jev-1.13) while evaluating. TypeSafe-direct: jev-latest",
+      "default": "~typesafe/jev-latest"
+    },
+    "endpoint": {
+      "type": "string",
+      "title": "Endpoint",
+      "description": "Full System One URL. TypeSafe-direct: https://api.typesafe.ai/v1/systemone",
+      "default": "https://openrouter.ai/api/v1/systemone"
+    }
+  }
+}

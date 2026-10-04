@@ -1,0 +1,4 @@
+{
+  "description": "Sets the main loop's reasoning effort per prompt with TypeSafe's Jev: prompt.submit classifies, turn.step applies.",
+  "modules": ["./jev-effort.ts"]
+}
