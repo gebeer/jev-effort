@@ -1,70 +1,155 @@
 # jev-effort
 
-A Claude Code mod that sets the main conversation's reasoning effort for each prompt, using [Jev](https://openrouter.ai/docs/guides/community/jev), TypeSafe's decision model, reached through OpenRouter.
+A Claude Code mod. It sets the reasoning effort for each prompt.
 
-On each prompt it reads recent context and asks Jev one question: how much reasoning does this work need? It maps the score (0–3) to `low` / `medium` / `high` / `xhigh` and applies it at the turn's first request. The turn keeps that effort through all its tool calls. Subagents are never touched, and the mod never sets `max`.
+The mod sends your prompt to [Jev](https://openrouter.ai/docs/guides/community/jev) through OpenRouter. Jev gives a score from 0 to 3. The mod changes the score to an effort level:
 
-**Shadow mode is on by default.** It classifies and logs what it *would* set, without changing anything. Turn it off once the logs show that Jev's calls match yours.
+| Score | Effort |
+|---|---|
+| 0 | `low` |
+| 1 | `medium` |
+| 2 | `high` |
+| 3 | `xhigh` |
+
+- The effort stays the same for all tool calls in the turn.
+- The mod does not change subagents.
+- The mod does not set `max`.
+
+> **Shadow mode is on by default.** The mod only writes what it *would* set. It does not change the effort.
+
+## Requirements
+
+- Claude Code 2.1.259 or later
+- An [OpenRouter](https://openrouter.ai/keys) API key
 
 ## Install
 
-Requires Claude Code ≥ 2.1.259 with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`.
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/gebeer/jev-effort.git
+   ```
+
+2. Start Claude Code with the mod:
+
+   ```bash
+   CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir ./jev-effort
+   ```
+
+## Set the OpenRouter key
+
+Use one of these two methods.
+
+**Method A: environment variable**
 
 ```bash
-CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir /path/to/jev-effort
+export OPENROUTER_API_KEY=sk-or-...
 ```
 
-Put your OpenRouter key in the `OPENROUTER_API_KEY` environment variable, or under `pluginConfigs` → `jev-effort` → `options` → `apiKey` in settings (it's a secret, so `/config` doesn't show it). Change the other options, such as `shadow`, through `/config`.
+**Method B: settings file**
+
+Add the key to `~/.claude/settings.json`:
+
+```json
+{
+  "pluginConfigs": {
+    "jev-effort": {
+      "options": {
+        "apiKey": "sk-or-..."
+      }
+    }
+  }
+}
+```
+
+Note:
+- If you set both, the mod uses the settings file.
+- If you set no key, the mod does nothing.
+- `/config` does not show the key, because the key is secret.
 
 ## Options
 
-| Option | Default | |
+Change the options in `/config`, or in `pluginConfigs` → `jev-effort` → `options`.
+
+| Option | Default | Function |
 |---|---|---|
-| `apiKey` | `""` | OpenRouter key. If empty, the `OPENROUTER_API_KEY` environment variable is used; if that's unset too, the mod does nothing. |
-| `shadow` | `true` | Log only; never change a request. |
-| `sendContext` | `true` | Send the last reply, earlier prompts and the last turn's tool names. Off: the prompt alone. |
-| `minUpgradeConfidence` | `0.3` | How sure Jev must be to raise effort above your `/effort`. |
-| `minDowngradeConfidence` | `0.6` | How sure Jev must be to lower it. |
-| `timeoutMs` | `800` | The longest each prompt waits for Jev (100–5000). |
-| `logDecisions` | `true` | One transcript line per turn. |
-| `model` | `~typesafe/jev-latest` | Pin a version (e.g. `typesafe/jev-1.13`) while evaluating. |
-| `endpoint` | `https://openrouter.ai/api/v1/systemone` | For TypeSafe-direct: `https://api.typesafe.ai/v1/systemone`, with model `jev-latest`. |
+| `apiKey` | `""` | The OpenRouter key. |
+| `shadow` | `true` | Write the decision only. Do not change the effort. |
+| `sendContext` | `true` | Send recent conversation context. If `false`, send the prompt only. |
+| `minUpgradeConfidence` | `0.3` | The minimum confidence to increase the effort. |
+| `minDowngradeConfidence` | `0.6` | The minimum confidence to decrease the effort. |
+| `timeoutMs` | `800` | The maximum wait time for Jev, in ms (100–5000). |
+| `logDecisions` | `true` | Write one line per turn in the transcript. |
+| `model` | `~typesafe/jev-latest` | The Jev model. Example: `typesafe/jev-1.13`. |
+| `endpoint` | `https://openrouter.ai/api/v1/systemone` | The API URL. For TypeSafe direct, use `https://api.typesafe.ai/v1/systemone` with model `jev-latest`. |
 
-Your `/effort` is the baseline the mod moves from: neither a floor nor a ceiling. With `/effort max`, a numeric budget, or a model without effort, the mod leaves the turn alone.
+## How it works
 
-**What gets skipped.** Bare slash commands (`/simplify`), prompts typed while a turn is running, empty prompts, and anything that isn't from you (notifications, peers, schedules) are not classified.
+- Your `/effort` is the start point. The mod increases or decreases from it.
+- With `/effort max`, a numeric budget, or a model without effort, the mod does nothing.
+- If Jev fails (timeout, HTTP error, bad answer), the mod uses the effort of the previous turn.
 
-**Failures.** On a timeout, an HTTP error or a bad answer, the turn repeats the previous turn's effort (as long as your `/effort` hasn't changed). That keeps the effort steady instead of snapping back.
+The mod does not classify these prompts:
+- Slash commands without text (for example `/simplify`)
+- Prompts that you type while a turn runs
+- Empty prompts
+- Messages that do not come from you (notifications, peers, schedules)
 
-## Reading the output
+## Read the output
 
-- **Transcript:** one line per turn, e.g. `[jev-effort] shadow · jev 0.42 → low (conf 0.71, 212ms) · high → low`.
-- **Status line:** `jev-effort: ● ▁▃█▂▁ medium → low 0.71 · 340ms`. In shadow mode it starts with `shadow`. The glyph is the request state: `◌` asking, `●` answered, `✕` failed (timeout or HTTP error), `–` nothing sent (skipped). The bars are the last 8 Jev scores, low to high; if every bar is the same height, Jev isn't telling your prompts apart.
+**Transcript line:**
 
-In shadow mode, compare those lines with your own sense of each task. Once Jev's calls look right, set `shadow: false`. If its confident downgrades are often wrong, raise `minDowngradeConfidence`. Running a while with `sendContext: false` shows what the context adds.
+```
+[jev-effort] shadow · jev 0.42 → low (conf 0.71, 212ms) · high → low
+```
+
+**Status line:**
+
+```
+jev-effort: ● ▁▃█▂▁ medium → low 0.71 · 340ms
+```
+
+| Symbol | Meaning |
+|---|---|
+| `◌` | Request in progress |
+| `●` | Jev answered |
+| `✕` | Request failed |
+| `–` | Prompt skipped |
+| `▁▃█` | The last 8 Jev scores. If all bars have the same height, Jev does not see a difference between your prompts. |
+
+## Tune the mod
+
+1. Use shadow mode for some time.
+2. Compare each decision with your own opinion.
+3. When the decisions are correct, set `shadow` to `false`.
+4. If Jev decreases the effort incorrectly too often, increase `minDowngradeConfidence`.
 
 ## Prompt cache
 
-On models with per-turn effort (Opus 5.5, Sonnet 5.5, Opus 5, Fable 5.1, Mythos 5.1), Claude Code sends an effort change as an in-conversation message, so the prompt cache survives. Measured on 2.1.289 with a subscription (2026-10-04): when a `turn.step` hook changed the effort, the next request still read the whole ~82k-token prefix from cache. On older models, an effort change re-caches the conversation.
+On newer models (Opus 5.5, Sonnet 5.5, Opus 5, Fable 5.1, Mythos 5.1), an effort change does not break the prompt cache.
+
+On older models, an effort change creates a new cache for the conversation.
+
+Tested on Claude Code 2.1.289, 2026-10-04.
 
 ## Privacy
 
-With a key set, each classified prompt sends the following to `endpoint` (OpenRouter, which forwards it to TypeSafe):
-- your prompt (up to 2000 characters)
-- Claude's last reply (up to 1500)
-- up to 3 earlier prompts (300 characters each)
-- the last turn's tool names, with counts and failure counts
+The mod sends this data to the endpoint (OpenRouter sends it to TypeSafe):
+- Your prompt (maximum 2000 characters)
+- Claude's last reply (maximum 1500 characters)
+- Maximum 3 earlier prompts (300 characters each)
+- The tool names of the last turn, with counts and failure counts
 
-Never sent: tool inputs or outputs, file contents, the system prompt, CLAUDE.md or memory, images, session ids or paths. Whatever you or Claude wrote into those texts goes with them.
+The mod does **not** send:
+- Tool inputs or outputs
+- File contents
+- The system prompt, CLAUDE.md, or memory
+- Images, session IDs, or paths
+
+Note: Text that you or Claude write in the prompts and replies goes with them.
 
 ## License
 
-MIT. Forked from claude-code-templates' `jev-model-router` v0.4.2 (github.com/davila7/claude-code-templates), reduced to effort routing with conversation context, shadow mode and OpenRouter.
+MIT. See [LICENSE](LICENSE).
 
-Copyright (c) 2025 Daniel (San) Ávila. Modifications copyright (c) 2026 gebeer.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Forked from `jev-model-router` v0.4.2 in [claude-code-templates](https://github.com/davila7/claude-code-templates).
